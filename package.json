@@ -1,0 +1,38 @@
+{
+  "name": "data_recorder_backend",
+  "version": "1.0.0",
+  "description": "SLAM data recorder upload backend service",
+  "type": "module",
+  "main": "src/server.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "check": "node --check src/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Adam-code-line/data_recorder_backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Adam-code-line/data_recorder_backend/issues"
+  },
+  "homepage": "https://github.com/Adam-code-line/data_recorder_backend#readme",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@fastify/multipart": "^9.4.0",
+    "check-disk-space": "^3.4.0",
+    "dotenv": "^17.4.1",
+    "fastify": "^5.8.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
