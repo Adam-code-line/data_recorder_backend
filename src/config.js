@@ -42,6 +42,25 @@ function parseCsvEnv(name, defaultValue = []) {
     .filter(Boolean);
 }
 
+function parseHostEnv(name, defaultValue) {
+  const raw = process.env[name];
+  if (raw == null || raw.trim() === "") {
+    return defaultValue;
+  }
+
+  const value = raw.trim();
+
+  // Allow users to configure HOST as [::] in .env and normalize to ::
+  if (value.startsWith("[") && value.endsWith("]")) {
+    const normalized = value.slice(1, -1).trim();
+    if (normalized.length > 0) {
+      return normalized;
+    }
+  }
+
+  return value;
+}
+
 export function loadConfig() {
   const rootDir = process.cwd();
 
@@ -82,8 +101,9 @@ export function loadConfig() {
 
   return Object.freeze({
     appName: process.env.APP_NAME ?? "data-recorder-backend",
-    host: process.env.HOST ?? "0.0.0.0",
+    host: parseHostEnv("HOST", "::"),
     port: parseIntEnv("PORT", 8080, { min: 1 }),
+    ipv6Only: parseBoolEnv("IPV6_ONLY", false),
     logLevel: process.env.LOG_LEVEL ?? "info",
 
     uploadRootDir,

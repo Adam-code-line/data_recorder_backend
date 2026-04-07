@@ -31,12 +31,14 @@ try {
   await app.listen({
     host: config.host,
     port: config.port,
+    ipv6Only: config.ipv6Only,
   });
 
   app.log.info(
     {
       host: config.host,
       port: config.port,
+      ipv6Only: config.ipv6Only,
       uploadRootDir: config.uploadRootDir,
       requireAuth: config.requireAuth,
     },
