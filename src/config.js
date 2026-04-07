@@ -64,12 +64,19 @@ function parseHostEnv(name, defaultValue) {
 export function loadConfig() {
   const rootDir = process.cwd();
 
-  const uploadRootDir =
-    process.env.UPLOAD_ROOT_DIR ?? path.join(rootDir, "data", "uploads");
+  const rawUploadRootDir =
+    process.env.UPLOAD_ROOT_DIR ?? path.join("data", "uploads");
+  const uploadRootDir = path.isAbsolute(rawUploadRootDir)
+    ? rawUploadRootDir
+    : path.resolve(rootDir, rawUploadRootDir);
+
   const stagingDir = path.join(uploadRootDir, ".staging");
-  const idempotencyFilePath =
+  const rawIdempotencyFilePath =
     process.env.IDEMPOTENCY_FILE_PATH ??
-    path.join(rootDir, "data", "idempotency-store.json");
+    path.join("data", "idempotency-store.json");
+  const idempotencyFilePath = path.isAbsolute(rawIdempotencyFilePath)
+    ? rawIdempotencyFilePath
+    : path.resolve(rootDir, rawIdempotencyFilePath);
 
   const authTokens = parseCsvEnv("AUTH_TOKENS");
   const requireAuth = parseBoolEnv("REQUIRE_AUTH", true);
