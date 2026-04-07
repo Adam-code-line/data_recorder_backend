@@ -24,13 +24,20 @@ npm -v
 
 ```bash
 cd /srv
-sudo mkdir -p data_recorder_backend
-sudo chown -R $USER:$USER /srv/data_recorder_backend
+sudo install -d -o $USER -g $USER /srv/data_recorder_backend
+git clone <你的仓库地址> /srv/data_recorder_backend
 cd /srv/data_recorder_backend
 
-git clone <你的仓库地址> .
-npm ci
+# 有 package-lock.json 用 npm ci；否则用 npm install
+if [ -f package-lock.json ]; then npm ci; else npm install; fi
 ```
+
+说明：
+
+- 这里直接把仓库 clone 到 `/srv/data_recorder_backend`，避免出现
+  `/srv/data_recorder_backend/data_recorder_backend` 的嵌套目录。
+- 如果你没有 `/srv` 的权限，可改为在家目录部署：
+  `git clone <你的仓库地址> ~/data_recorder_backend`
 
 ## 3. 配置环境变量
 
@@ -41,7 +48,7 @@ nano .env
 
 建议重点修改：
 
-- `AUTH_TOKENS`：换成高强度随机 token
+- `AUTH_TOKENS`：自用可先用单 token（示例：`slam-self-use-token`），并与 Flutter 端保持一致
 - `UPLOAD_ROOT_DIR`：例如 `/srv/data-recorder/uploads`
 - `IDEMPOTENCY_FILE_PATH`：例如 `/srv/data-recorder/idempotency-store.json`
 - `PORT`：例如 `8080`
@@ -192,3 +199,15 @@ curl -X POST "http://127.0.0.1:8080/api/v1/slam/upload" \
 
 - 确认 `IDEMPOTENCY_FILE_PATH` 指向持久化目录
 - 确认进程用户对该路径有读写权限
+
+5. 目录出现嵌套（`.../data_recorder_backend/data_recorder_backend`）
+
+- 重新清理并按第 2 节命令拉取：
+
+```bash
+cd /srv
+sudo rm -rf /srv/data_recorder_backend
+sudo install -d -o $USER -g $USER /srv/data_recorder_backend
+git clone <你的仓库地址> /srv/data_recorder_backend
+cd /srv/data_recorder_backend
+```
