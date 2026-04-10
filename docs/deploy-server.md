@@ -229,3 +229,43 @@ sudo install -d -o $USER -g $USER /srv/data_recorder_backend
 git clone <你的仓库地址> /srv/data_recorder_backend
 cd /srv/data_recorder_backend
 ```
+
+## 10. PM2 更新部署（拉取最新代码）
+
+你当前使用 PM2 管理服务，建议按以下固定流程更新：
+
+```bash
+ssh <你的服务器>
+cd /srv/data_recorder_backend
+
+# 1) 备份当前环境变量（建议）
+cp .env .env.bak-$(date +%F-%H%M%S)
+
+# 2) 拉取最新代码（以 main 分支为例）
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+
+# 3) 安装依赖
+if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+# 4) 重启 PM2 进程并刷新环境变量
+pm2 restart data-recorder-backend --update-env
+pm2 save
+
+# 5) 检查状态与日志
+pm2 status
+pm2 logs data-recorder-backend --lines 200
+```
+
+重点检查日志里的启动参数：
+
+- `uploadRootDir` 应为 `/home/wubin/EmbodMocap_dev/datasets`
+- `datasetCaptureName / datasetSceneName / datasetSeqName` 应符合你的期望
+
+另外建议确认当前确实只有 PM2 在管理该服务，避免和 systemd 重复启动：
+
+```bash
+pm2 status
+sudo systemctl status data-recorder-backend --no-pager
+```
