@@ -3,6 +3,7 @@ import { createWriteStream } from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import checkDiskSpaceModule from "check-disk-space";
+import unzipper from "unzipper";
 
 import { AppError } from "./errors.js";
 
@@ -10,6 +11,14 @@ const checkDiskSpace = checkDiskSpaceModule.default ?? checkDiskSpaceModule;
 
 const SESSION_NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
 const TASK_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
+const DATASET_SEGMENT_PATTERN = /^[A-Za-z0-9._-]+$/;
+const SCENE_ROOT_ALLOWED_FILES = new Set([
+  "calibration.json",
+  "data.jsonl",
+  "data.mov",
+  "metadata.json",
+]);
+const SCENE_ROOT_IGNORED_FILES = new Set(["data2.mov"]);
 
 export async function ensureStorageReady(config) {
   await fs.mkdir(config.uploadRootDir, { recursive: true });
@@ -72,6 +81,28 @@ export function normalizeSessionName(sessionName) {
   return trimmed;
 }
 
+export function normalizeDatasetSegment(
+  value,
+  { fieldName, defaultValue = "" } = {},
+) {
+  const candidate = (value == null ? defaultValue : value).trim();
+  if (
+    !candidate ||
+    candidate === "." ||
+    candidate === ".." ||
+    !DATASET_SEGMENT_PATTERN.test(candidate)
+  ) {
+    throw new AppError({
+      statusCode: 400,
+      errorCode: "INVALID_DATASET_SEGMENT",
+      message: `Invalid ${fieldName}. Allowed: letters, numbers, dot, underscore, dash.`,
+      retryable: false,
+    });
+  }
+
+  return candidate;
+}
+
 export async function assertDiskFreeSpace(config) {
   const result = await checkDiskSpace(config.uploadRootDir);
   if (result.free < config.diskFreeThresholdBytes) {
@@ -122,22 +153,52 @@ export function buildStoragePaths({
   config,
   taskId,
   sessionName,
-  now = new Date(),
+  captureName,
+  sceneName,
+  seqName,
 }) {
-  const dateSegment = now.toISOString().slice(0, 10);
-  const fileName = `${taskId}_${Date.now()}.zip`;
-  const finalDir = path.join(config.uploadRootDir, dateSegment, sessionName);
+  const normalizedCaptureName = normalizeDatasetSegment(captureName, {
+    fieldName: "captureName",
+    defaultValue: config.datasetCaptureName,
+  });
+  const normalizedSceneName = normalizeDatasetSegment(sceneName, {
+    fieldName: "sceneName",
+    defaultValue: config.datasetSceneName,
+  });
+  const normalizedSeqName = normalizeDatasetSegment(seqName, {
+    fieldName: "seqName",
+    defaultValue: config.datasetSeqName,
+  });
+
+  const sessionBaseName = sessionName.toLowerCase().endsWith(".zip")
+    ? sessionName.slice(0, -4)
+    : sessionName;
+
+  const fileName = `${sessionBaseName}.zip`;
+  const mirrorFileName = `${sessionBaseName}(1).zip`;
+  const finalSceneDir = path.join(
+    config.uploadRootDir,
+    normalizedCaptureName,
+    normalizedSceneName,
+  );
+  const finalDir = path.join(finalSceneDir, normalizedSeqName);
   const finalPath = path.join(finalDir, fileName);
+  const mirrorPath = path.join(finalDir, mirrorFileName);
   const stagingPath = path.join(
     config.stagingDir,
     `${taskId}_${Date.now()}_${Math.round(Math.random() * 1e6)}.part`,
   );
 
   return {
-    dateSegment,
+    captureName: normalizedCaptureName,
+    sceneName: normalizedSceneName,
+    seqName: normalizedSeqName,
+    finalSceneDir,
     fileName,
+    mirrorFileName,
     finalDir,
     finalPath,
+    mirrorPath,
     stagingPath,
   };
 }
@@ -178,7 +239,84 @@ export async function writePartToStaging(part, stagingPath) {
 
 export async function moveStagingToFinal(stagingPath, finalDir, finalPath) {
   await fs.mkdir(finalDir, { recursive: true });
+  await fs.rm(finalPath, { force: true });
   await fs.rename(stagingPath, finalPath);
+}
+
+export async function copyFinalToMirror(finalPath, mirrorPath) {
+  await fs.mkdir(path.dirname(mirrorPath), { recursive: true });
+  await fs.rm(mirrorPath, { force: true });
+  await fs.copyFile(finalPath, mirrorPath);
+}
+
+function normalizeArchiveEntryPath(entryPath) {
+  return entryPath
+    .replace(/\\/g, "/")
+    .replace(/^\.\/+/, "")
+    .replace(/^\/+/, "");
+}
+
+function resolveSceneRelativePath(entryPath) {
+  const normalized = normalizeArchiveEntryPath(entryPath);
+  if (!normalized) {
+    return null;
+  }
+
+  const candidates = [normalized];
+  const firstSlash = normalized.indexOf("/");
+  if (firstSlash > 0) {
+    candidates.push(normalized.slice(firstSlash + 1));
+  }
+
+  for (const candidate of candidates) {
+    if (SCENE_ROOT_IGNORED_FILES.has(candidate)) {
+      return {
+        ignore: true,
+      };
+    }
+
+    if (
+      SCENE_ROOT_ALLOWED_FILES.has(candidate) ||
+      candidate.startsWith("frames2/")
+    ) {
+      return {
+        ignore: false,
+        relativePath: candidate,
+      };
+    }
+  }
+
+  return null;
+}
+
+export async function extractSceneFilesFromZip({ zipPath, sceneDir }) {
+  await fs.mkdir(sceneDir, { recursive: true });
+
+  const archive = await unzipper.Open.file(zipPath);
+  const extractedPaths = [];
+
+  for (const entry of archive.files) {
+    if (entry.type !== "File") {
+      continue;
+    }
+
+    const resolved = resolveSceneRelativePath(entry.path ?? "");
+    if (!resolved || resolved.ignore) {
+      continue;
+    }
+
+    const outputPath = path.join(sceneDir, ...resolved.relativePath.split("/"));
+    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+
+    const output = createWriteStream(outputPath, { flags: "w" });
+    await pipeline(entry.stream(), output);
+    extractedPaths.push(resolved.relativePath);
+  }
+
+  await safeDeleteFile(path.join(sceneDir, "data2.mov"));
+
+  extractedPaths.sort((a, b) => a.localeCompare(b));
+  return extractedPaths;
 }
 
 export async function safeDeleteFile(filePath) {

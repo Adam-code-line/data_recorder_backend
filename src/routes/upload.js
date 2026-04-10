@@ -4,6 +4,8 @@ import { AppError } from "../errors.js";
 import {
   assertDiskFreeSpace,
   buildStoragePaths,
+  copyFinalToMirror,
+  extractSceneFilesFromZip,
   moveStagingToFinal,
   normalizeSessionName,
   normalizeTaskId,
@@ -85,6 +87,9 @@ export async function registerUploadRoutes(fastify, options) {
         let uploaded = false;
         let sessionNameRaw = "";
         let sessionPath = "";
+        let captureNameRaw = "";
+        let sceneNameRaw = "";
+        let seqNameRaw = "";
         let originalFileName = "";
         let mimeType = "";
 
@@ -121,6 +126,15 @@ export async function registerUploadRoutes(fastify, options) {
           if (part.fieldname === "sessionPath") {
             sessionPath = String(part.value ?? "").trim();
           }
+          if (part.fieldname === "captureName") {
+            captureNameRaw = String(part.value ?? "").trim();
+          }
+          if (part.fieldname === "sceneName") {
+            sceneNameRaw = String(part.value ?? "").trim();
+          }
+          if (part.fieldname === "seqName") {
+            seqNameRaw = String(part.value ?? "").trim();
+          }
         }
 
         if (!uploaded) {
@@ -134,14 +148,31 @@ export async function registerUploadRoutes(fastify, options) {
 
         const sessionName = normalizeSessionName(sessionNameRaw);
 
-        const { finalDir, finalPath, fileName, dateSegment } =
-          buildStoragePaths({
-            config,
-            taskId,
-            sessionName,
-          });
+        const {
+          captureName,
+          sceneName,
+          seqName,
+          finalSceneDir,
+          finalDir,
+          finalPath,
+          mirrorPath,
+          fileName,
+          mirrorFileName,
+        } = buildStoragePaths({
+          config,
+          taskId,
+          sessionName,
+          captureName: captureNameRaw || undefined,
+          sceneName: sceneNameRaw || undefined,
+          seqName: seqNameRaw || undefined,
+        });
 
         await moveStagingToFinal(stagingPath, finalDir, finalPath);
+        await copyFinalToMirror(finalPath, mirrorPath);
+        const extractedSceneFiles = await extractSceneFilesFromZip({
+          zipPath: finalPath,
+          sceneDir: finalSceneDir,
+        });
         stagingPath = "";
 
         const uploadedAt = new Date().toISOString();
@@ -149,9 +180,15 @@ export async function registerUploadRoutes(fastify, options) {
           taskId,
           sessionName,
           sessionPath: sessionPath || null,
-          dateSegment,
+          captureName,
+          sceneName,
+          seqName,
           fileName,
+          mirrorFileName,
           storedPath: finalPath,
+          mirrorStoredPath: mirrorPath,
+          sceneDir: finalSceneDir,
+          extractedSceneFiles,
           uploadedBytes,
           mimeType,
           originalFileName,
@@ -167,6 +204,9 @@ export async function registerUploadRoutes(fastify, options) {
           {
             taskId,
             sessionName,
+            captureName,
+            sceneName,
+            seqName,
             uploadedBytes,
             durationMs,
             storedPath: finalPath,

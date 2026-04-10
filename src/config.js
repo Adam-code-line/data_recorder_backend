@@ -1,5 +1,7 @@
 import path from "node:path";
 
+const DATASET_SEGMENT_PATTERN = /^[A-Za-z0-9._-]+$/;
+
 function parseIntEnv(name, defaultValue, { min = undefined } = {}) {
   const raw = process.env[name];
   if (raw == null || raw.trim() === "") {
@@ -40,6 +42,23 @@ function parseCsvEnv(name, defaultValue = []) {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function parseDatasetSegmentEnv(name, defaultValue) {
+  const raw = process.env[name];
+  const value = (raw == null ? defaultValue : raw).trim();
+
+  if (!value) {
+    throw new Error(`Env ${name} cannot be empty.`);
+  }
+
+  if (value === "." || value === ".." || !DATASET_SEGMENT_PATTERN.test(value)) {
+    throw new Error(
+      `Env ${name} contains invalid segment: ${value}. Allowed: letters, numbers, dot, underscore, dash.`,
+    );
+  }
+
+  return value;
 }
 
 function parseHostEnv(name, defaultValue) {
@@ -97,6 +116,16 @@ export function loadConfig() {
     min: 1,
   });
 
+  const datasetCaptureName = parseDatasetSegmentEnv(
+    "DATASET_CAPTURE_NAME",
+    "my_capture",
+  );
+  const datasetSceneName = parseDatasetSegmentEnv(
+    "DATASET_SCENE_NAME",
+    "livingroom1",
+  );
+  const datasetSeqName = parseDatasetSegmentEnv("DATASET_SEQ_NAME", "seq0");
+
   const allowedMimeTypes = new Set(
     parseCsvEnv("ALLOWED_MIME_TYPES", [
       "application/zip",
@@ -116,6 +145,9 @@ export function loadConfig() {
     uploadRootDir,
     stagingDir,
     idempotencyFilePath,
+    datasetCaptureName,
+    datasetSceneName,
+    datasetSeqName,
     maxFileSizeBytes: maxFileSizeMb * 1024 * 1024,
     diskFreeThresholdBytes: diskFreeThresholdMb * 1024 * 1024,
     allowedMimeTypes,

@@ -49,8 +49,11 @@ nano .env
 建议重点修改：
 
 - `AUTH_TOKENS`：自用可先用单 token（示例：`slam-self-use-token`），并与 Flutter 端保持一致
-- `UPLOAD_ROOT_DIR`：例如 `/srv/data-recorder/uploads`
-- `IDEMPOTENCY_FILE_PATH`：例如 `/srv/data-recorder/idempotency-store.json`
+- `UPLOAD_ROOT_DIR`：例如 `/home/wubin/EmbodMocap_dev/datasets`
+- `IDEMPOTENCY_FILE_PATH`：例如 `/home/wubin/EmbodMocap_dev/datasets/idempotency-store.json`
+- `DATASET_CAPTURE_NAME`：例如 `my_capture`
+- `DATASET_SCENE_NAME`：例如 `livingroom1`
+- `DATASET_SEQ_NAME`：例如 `seq0`
 - `PORT`：例如 `8080`
 - `MAX_FILE_SIZE_MB`：按实际 ZIP 大小配置
 - `DISK_FREE_THRESHOLD_MB`：保留安全空间
@@ -58,9 +61,8 @@ nano .env
 创建存储目录：
 
 ```bash
-sudo mkdir -p /srv/data-recorder/uploads
-sudo mkdir -p /srv/data-recorder
-sudo chown -R $USER:$USER /srv/data-recorder
+sudo mkdir -p /home/wubin/EmbodMocap_dev/datasets/my_capture/livingroom1/seq0
+sudo chown -R $USER:$USER /home/wubin/EmbodMocap_dev/datasets
 ```
 
 ## 4. 启动方式 A：PM2（推荐）
@@ -168,6 +170,22 @@ curl -X POST "http://127.0.0.1:8080/api/v1/slam/upload" \
   -H "X-Upload-Task-Id: deploy-check-001" \
   -F "file=@/tmp/test.zip" \
   -F "sessionName=recording_2026-04-06_21-10-05"
+```
+
+上传成功后会生成如下结构（单机位会自动复制同一个 ZIP 为 `(1)`）：
+
+```text
+/home/wubin/EmbodMocap_dev/datasets/
+└── my_capture/
+    └── livingroom1/
+        ├── calibration.json
+        ├── data.jsonl
+        ├── data.mov
+        ├── metadata.json
+        ├── frames2/               # 若 ZIP 中包含则会抽取
+        └── seq0/
+            ├── recording_2026-04-06_21-10-05.zip
+            └── recording_2026-04-06_21-10-05(1).zip
 ```
 
 ## 8. Flutter 对接要点

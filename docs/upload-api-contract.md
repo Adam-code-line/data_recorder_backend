@@ -18,20 +18,34 @@
 - `file`：ZIP 文件（必需）
 - `sessionName`：会话目录名（必需）
 - `sessionPath`：客户端会话绝对路径（可选）
+- `captureName`：数据集一级目录（可选，默认来自服务端 `DATASET_CAPTURE_NAME`）
+- `sceneName`：场景目录（可选，默认来自服务端 `DATASET_SCENE_NAME`）
+- `seqName`：序列目录（可选，默认来自服务端 `DATASET_SEQ_NAME`）
 
 ## 3. 成功响应（示例）
 
 ```json
 {
   "code": 0,
-  "message": "上传成功。",
+  "message": "Upload succeeded.",
   "data": {
     "taskId": "e8b2adf3-3440-4bc0-8564-3d4ca8a1f7d4",
     "sessionName": "recording_2026-04-06_21-10-05",
     "sessionPath": "/var/mobile/...",
-    "dateSegment": "2026-04-06",
-    "fileName": "e8b2adf3-3440-4bc0-8564-3d4ca8a1f7d4_1775491234123.zip",
-    "storedPath": "/srv/data-recorder/uploads/2026-04-06/recording_2026-04-06_21-10-05/xxx.zip",
+    "captureName": "my_capture",
+    "sceneName": "livingroom1",
+    "seqName": "seq0",
+    "fileName": "recording_2026-04-06_21-10-05.zip",
+    "mirrorFileName": "recording_2026-04-06_21-10-05(1).zip",
+    "storedPath": "/home/wubin/EmbodMocap_dev/datasets/my_capture/livingroom1/seq0/recording_2026-04-06_21-10-05.zip",
+    "mirrorStoredPath": "/home/wubin/EmbodMocap_dev/datasets/my_capture/livingroom1/seq0/recording_2026-04-06_21-10-05(1).zip",
+    "sceneDir": "/home/wubin/EmbodMocap_dev/datasets/my_capture/livingroom1",
+    "extractedSceneFiles": [
+      "calibration.json",
+      "data.jsonl",
+      "data.mov",
+      "metadata.json"
+    ],
     "uploadedBytes": 20345123,
     "mimeType": "application/octet-stream",
     "originalFileName": "recording_2026-04-06_21-10-05.zip",
