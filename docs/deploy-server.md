@@ -52,7 +52,7 @@ nano .env
 - `UPLOAD_ROOT_DIR`：例如 `/home/wubin/EmbodMocap_dev/datasets`
 - `IDEMPOTENCY_FILE_PATH`：例如 `/home/wubin/EmbodMocap_dev/datasets/idempotency-store.json`
 - `DATASET_CAPTURE_NAME`：例如 `my_capture`
-- `DATASET_SCENE_NAME`：例如 `livingroom1`
+- `DATASET_SCENE_NAME`：例如 `scene`（作为场景名前缀，最终会自动生成 `scene_YYYYMMDD_HHMMSS`）
 - `DATASET_SEQ_NAME`：例如 `seq0`
 - `PORT`：例如 `8080`
 - `MAX_FILE_SIZE_MB`：按实际 ZIP 大小配置
@@ -61,7 +61,7 @@ nano .env
 创建存储目录：
 
 ```bash
-sudo mkdir -p /home/wubin/EmbodMocap_dev/datasets/my_capture/livingroom1/seq0
+sudo mkdir -p /home/wubin/EmbodMocap_dev/datasets/my_capture
 sudo chown -R $USER:$USER /home/wubin/EmbodMocap_dev/datasets
 ```
 
@@ -177,15 +177,15 @@ curl -X POST "http://127.0.0.1:8080/api/v1/slam/upload" \
 ```text
 /home/wubin/EmbodMocap_dev/datasets/
 └── my_capture/
-    └── livingroom1/
-        ├── calibration.json
-        ├── data.jsonl
-        ├── data.mov
-        ├── metadata.json
-        ├── frames2/               # 若 ZIP 中包含则会抽取
-        └── seq0/
-            ├── recording_2026-04-06_21-10-05.zip
-            └── recording_2026-04-06_21-10-05(1).zip
+  └── scene_20260410_132011/
+    ├── calibration.json
+    ├── data.jsonl
+    ├── data.mov
+    ├── metadata.json
+    ├── frames2/               # 若 ZIP 中包含则会抽取
+    └── seq0/
+      ├── recording_2026-04-06_21-10-05.zip
+      └── recording_2026-04-06_21-10-05(1).zip
 ```
 
 ## 8. Flutter 对接要点

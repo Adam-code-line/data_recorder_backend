@@ -122,7 +122,7 @@ export function loadConfig() {
   );
   const datasetSceneName = parseDatasetSegmentEnv(
     "DATASET_SCENE_NAME",
-    "livingroom1",
+    "scene",
   );
   const datasetSeqName = parseDatasetSegmentEnv("DATASET_SEQ_NAME", "seq0");
 

@@ -8,7 +8,7 @@ Node.js 上传接收服务（Fastify），用于接收 iOS/Flutter 端上传的 
 - Token 鉴权（Bearer + 兼容自定义头）
 - 基于 `X-Upload-Task-Id` 的幂等处理
 - 流式写入临时文件并原子落盘，避免半文件
-- 落盘到 `${UPLOAD_ROOT_DIR}/${DATASET_CAPTURE_NAME}/${DATASET_SCENE_NAME}/${DATASET_SEQ_NAME}`
+- 落盘到 `${UPLOAD_ROOT_DIR}/${DATASET_CAPTURE_NAME}/${DATASET_SCENE_NAME}_YYYYMMDD_HHMMSS/${DATASET_SEQ_NAME}`（未传 `sceneName` 时）
 - 单机位自动复制为双份 ZIP（`xxx.zip` 与 `xxx(1).zip`）
 - 自动从 ZIP 抽取 `calibration.json/data.jsonl/data.mov/metadata.json`（忽略 `data2.mov`）
 - 上传大小限制、MIME/扩展名校验、磁盘余量保护

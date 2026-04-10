@@ -12,6 +12,7 @@ const checkDiskSpace = checkDiskSpaceModule.default ?? checkDiskSpaceModule;
 const SESSION_NAME_PATTERN = /^[A-Za-z0-9._-]+$/;
 const TASK_ID_PATTERN = /^[A-Za-z0-9._-]+$/;
 const DATASET_SEGMENT_PATTERN = /^[A-Za-z0-9._-]+$/;
+const SESSION_TIME_PATTERN = /(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})/;
 const SCENE_ROOT_ALLOWED_FILES = new Set([
   "calibration.json",
   "data.jsonl",
@@ -156,15 +157,31 @@ export function buildStoragePaths({
   captureName,
   sceneName,
   seqName,
+  now = new Date(),
 }) {
   const normalizedCaptureName = normalizeDatasetSegment(captureName, {
     fieldName: "captureName",
     defaultValue: config.datasetCaptureName,
   });
-  const normalizedSceneName = normalizeDatasetSegment(sceneName, {
+
+  let computedSceneName = sceneName?.trim();
+  if (!computedSceneName) {
+    const sessionTimeMatch = sessionName.match(SESSION_TIME_PATTERN);
+    if (sessionTimeMatch) {
+      const [, y, m, d, h, mm, s] = sessionTimeMatch;
+      computedSceneName = `${config.datasetSceneName}_${y}${m}${d}_${h}${mm}${s}`;
+    } else {
+      const nowIso = now.toISOString();
+      const ymd = nowIso.slice(0, 10).replace(/-/g, "");
+      const hms = nowIso.slice(11, 19).replace(/:/g, "");
+      computedSceneName = `${config.datasetSceneName}_${ymd}_${hms}`;
+    }
+  }
+
+  const normalizedSceneName = normalizeDatasetSegment(computedSceneName, {
     fieldName: "sceneName",
-    defaultValue: config.datasetSceneName,
   });
+
   const normalizedSeqName = normalizeDatasetSegment(seqName, {
     fieldName: "seqName",
     defaultValue: config.datasetSeqName,

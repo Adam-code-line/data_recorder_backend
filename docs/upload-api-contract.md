@@ -19,7 +19,7 @@
 - `sessionName`：会话目录名（必需）
 - `sessionPath`：客户端会话绝对路径（可选）
 - `captureName`：数据集一级目录（可选，默认来自服务端 `DATASET_CAPTURE_NAME`）
-- `sceneName`：场景目录（可选，默认来自服务端 `DATASET_SCENE_NAME`）
+- `sceneName`：场景目录（可选；若不传，服务端按 `${DATASET_SCENE_NAME}_YYYYMMDD_HHMMSS` 自动生成）
 - `seqName`：序列目录（可选，默认来自服务端 `DATASET_SEQ_NAME`）
 
 ## 3. 成功响应（示例）
@@ -33,13 +33,13 @@
     "sessionName": "recording_2026-04-06_21-10-05",
     "sessionPath": "/var/mobile/...",
     "captureName": "my_capture",
-    "sceneName": "livingroom1",
+    "sceneName": "scene_20260410_132011",
     "seqName": "seq0",
     "fileName": "recording_2026-04-06_21-10-05.zip",
     "mirrorFileName": "recording_2026-04-06_21-10-05(1).zip",
-    "storedPath": "/home/wubin/EmbodMocap_dev/datasets/my_capture/livingroom1/seq0/recording_2026-04-06_21-10-05.zip",
-    "mirrorStoredPath": "/home/wubin/EmbodMocap_dev/datasets/my_capture/livingroom1/seq0/recording_2026-04-06_21-10-05(1).zip",
-    "sceneDir": "/home/wubin/EmbodMocap_dev/datasets/my_capture/livingroom1",
+    "storedPath": "/home/wubin/EmbodMocap_dev/datasets/my_capture/scene_20260410_132011/seq0/recording_2026-04-06_21-10-05.zip",
+    "mirrorStoredPath": "/home/wubin/EmbodMocap_dev/datasets/my_capture/scene_20260410_132011/seq0/recording_2026-04-06_21-10-05(1).zip",
+    "sceneDir": "/home/wubin/EmbodMocap_dev/datasets/my_capture/scene_20260410_132011",
     "extractedSceneFiles": [
       "calibration.json",
       "data.jsonl",
