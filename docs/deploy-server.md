@@ -58,6 +58,24 @@ nano .env
 - `MAX_FILE_SIZE_MB`：按实际 ZIP 大小配置
 - `DISK_FREE_THRESHOLD_MB`：保留安全空间
 
+关键说明（避免落盘到错误目录）：
+
+- `UPLOAD_ROOT_DIR` 和 `IDEMPOTENCY_FILE_PATH` 请使用绝对路径。
+- 若写成相对路径（例如 `./data/uploads`），后端会按服务进程当前工作目录解析，通常会变成 `/srv/data_recorder_backend/data/uploads`。
+- 因此你看到“文件上传到 `/srv/data_recorder_backend/data/uploads`”通常是 `.env` 里仍是相对路径导致。
+
+如果你的 `.env` 已经存在相对路径，可直接执行以下修正命令：
+
+```bash
+cd /srv/data_recorder_backend
+cp .env .env.bak-$(date +%F-%H%M%S)
+
+sed -i 's|^UPLOAD_ROOT_DIR=.*|UPLOAD_ROOT_DIR=/home/wubin/EmbodMocap_dev/datasets|' .env
+sed -i 's|^IDEMPOTENCY_FILE_PATH=.*|IDEMPOTENCY_FILE_PATH=/home/wubin/EmbodMocap_dev/datasets/idempotency-store.json|' .env
+
+grep -E 'UPLOAD_ROOT_DIR|IDEMPOTENCY_FILE_PATH|DATASET_CAPTURE_NAME|DATASET_SCENE_NAME|DATASET_SEQ_NAME' .env
+```
+
 创建存储目录：
 
 ```bash
@@ -241,6 +259,10 @@ cd /srv/data_recorder_backend
 # 1) 备份当前环境变量（建议）
 cp .env .env.bak-$(date +%F-%H%M%S)
 
+# 1.1) 确认/修正为绝对路径（避免落盘到 /srv/data_recorder_backend/data/uploads）
+sed -i 's|^UPLOAD_ROOT_DIR=.*|UPLOAD_ROOT_DIR=/home/wubin/EmbodMocap_dev/datasets|' .env
+sed -i 's|^IDEMPOTENCY_FILE_PATH=.*|IDEMPOTENCY_FILE_PATH=/home/wubin/EmbodMocap_dev/datasets/idempotency-store.json|' .env
+
 # 2) 拉取最新代码（以 main 分支为例）
 git fetch origin
 git checkout main
@@ -256,6 +278,9 @@ pm2 save
 # 5) 检查状态与日志
 pm2 status
 pm2 logs data-recorder-backend --lines 200
+
+# 6) 确认运行时读取到的路径
+grep -E 'UPLOAD_ROOT_DIR|IDEMPOTENCY_FILE_PATH' .env
 ```
 
 重点检查日志里的启动参数：
