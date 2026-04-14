@@ -2,6 +2,111 @@
 
 本文以 Ubuntu 22.04 为例，演示如何把服务部署到远程服务器长期运行。
 
+## 0. 快速更新重部署
+
+适用于已经部署过后端、当前只想拉最新代码并重新启动服务的场景。
+
+### 0.1 PM2 快速指令
+
+直接复制执行：
+
+```bash
+ssh <你的服务器>
+cd /srv/data_recorder_backend
+
+# 1) 备份当前环境变量
+cp .env .env.bak-$(date +%F-%H%M%S)
+
+# 2) 拉取最新代码
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+
+# 3) 安装依赖
+if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+# 4) 可选：先做语法检查
+node --check src/app.js
+node --check src/routes/upload.js
+node --check src/storage.js
+
+# 5) 重启服务并刷新环境变量
+pm2 restart data-recorder-backend --update-env
+pm2 save
+
+# 6) 查看状态与最近日志
+pm2 status
+pm2 logs data-recorder-backend --lines 200
+```
+
+### 0.2 systemd 快速指令
+
+如果你不是用 PM2，而是用 `systemd` 托管：
+
+```bash
+ssh <你的服务器>
+cd /srv/data_recorder_backend
+
+# 1) 备份当前环境变量
+cp .env .env.bak-$(date +%F-%H%M%S)
+
+# 2) 拉取最新代码
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+
+# 3) 安装依赖
+if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+# 4) 可选：先做语法检查
+node --check src/app.js
+node --check src/routes/upload.js
+node --check src/storage.js
+
+# 5) 重启服务
+sudo systemctl restart data-recorder-backend
+
+# 6) 查看状态与最近日志
+sudo systemctl status data-recorder-backend --no-pager
+journalctl -u data-recorder-backend -n 200 --no-pager
+```
+
+### 0.3 更新后快速验证
+
+```bash
+# 健康检查
+curl http://127.0.0.1:8080/healthz
+
+# 查看 PM2 日志
+pm2 logs data-recorder-backend --lines 50
+
+# 或查看 systemd 日志
+journalctl -u data-recorder-backend -n 50 --no-pager
+```
+
+如果这次更新涉及上传协议，建议再补一个最小上传验证：
+
+```bash
+curl -X POST "http://127.0.0.1:8080/api/v1/slam/upload" \
+  -H "Authorization: Bearer <你的token>" \
+  -H "X-Upload-Task-Id: redeploy-check-001" \
+  -F "file=@/tmp/test.zip" \
+  -F "sessionName=recording_2026-04-06_21-10-05" \
+  -F "captureType=scene_only" \
+  -F "sceneName=scene_redeploy_check" \
+  -F "seqName=seq_redeploy_check" \
+  -F "pairGroupId=group_redeploy_check" \
+  -F "audioTrackPresent=false"
+```
+
+### 0.4 最常用的一行版
+
+如果你已经确认 `.env` 没问题，且服务由 PM2 管理，最常用的一套就是：
+
+```bash
+cd /srv/data_recorder_backend && git fetch origin && git checkout main && git pull --ff-only origin main && (if [ -f package-lock.json ]; then npm ci; else npm install; fi) && pm2 restart data-recorder-backend --update-env && pm2 save && pm2 logs data-recorder-backend --lines 100
+```
+
 ## 1. 服务器准备
 
 更新系统：
@@ -190,20 +295,20 @@ curl -X POST "http://127.0.0.1:8080/api/v1/slam/upload" \
   -F "sessionName=recording_2026-04-06_21-10-05"
 ```
 
-上传成功后会生成如下结构（单机位会自动复制同一个 ZIP 为 `(1)`）：
+上传成功后会生成如下结构：
 
 ```text
 /home/wubin/EmbodMocap_dev/datasets/
 └── my_capture/
   └── scene_20260410_132011/
-    ├── calibration.json
-    ├── data.jsonl
-    ├── data.mov
-    ├── metadata.json
-    ├── frames2/               # 若 ZIP 中包含则会抽取
+    ├── calibration.json        # 若 ZIP 中包含则会抽取
+    ├── data.jsonl              # 若 ZIP 中包含则会抽取
+    ├── data.mov                # 若 ZIP 中包含则会抽取
+    ├── metadata.json           # 若 ZIP 中包含则会抽取
+    ├── upload_context.json     # 若 ZIP 中包含则会抽取
+    ├── frames2/                # 若 ZIP 中包含则会抽取
     └── seq0/
-      ├── recording_2026-04-06_21-10-05.zip
-      └── recording_2026-04-06_21-10-05(1).zip
+      └── recording_2026-04-06_21-10-05.zip
 ```
 
 ## 8. Flutter 对接要点
