@@ -4,7 +4,6 @@ import { AppError } from "../errors.js";
 import {
   assertDiskFreeSpace,
   buildStoragePaths,
-  copyFinalToMirror,
   extractSceneFilesFromZip,
   moveStagingToFinal,
   normalizeSessionName,
@@ -90,6 +89,9 @@ export async function registerUploadRoutes(fastify, options) {
         let captureNameRaw = "";
         let sceneNameRaw = "";
         let seqNameRaw = "";
+        let captureTypeRaw = "";
+        let pairGroupIdRaw = "";
+        let audioTrackPresentRaw = "";
         let originalFileName = "";
         let mimeType = "";
 
@@ -135,6 +137,15 @@ export async function registerUploadRoutes(fastify, options) {
           if (part.fieldname === "seqName") {
             seqNameRaw = String(part.value ?? "").trim();
           }
+          if (part.fieldname === "captureType") {
+            captureTypeRaw = String(part.value ?? "").trim();
+          }
+          if (part.fieldname === "pairGroupId") {
+            pairGroupIdRaw = String(part.value ?? "").trim();
+          }
+          if (part.fieldname === "audioTrackPresent") {
+            audioTrackPresentRaw = String(part.value ?? "").trim();
+          }
         }
 
         if (!uploaded) {
@@ -155,9 +166,7 @@ export async function registerUploadRoutes(fastify, options) {
           finalSceneDir,
           finalDir,
           finalPath,
-          mirrorPath,
           fileName,
-          mirrorFileName,
         } = buildStoragePaths({
           config,
           taskId,
@@ -168,7 +177,6 @@ export async function registerUploadRoutes(fastify, options) {
         });
 
         await moveStagingToFinal(stagingPath, finalDir, finalPath);
-        await copyFinalToMirror(finalPath, mirrorPath);
         const extractedSceneFiles = await extractSceneFilesFromZip({
           zipPath: finalPath,
           sceneDir: finalSceneDir,
@@ -183,10 +191,14 @@ export async function registerUploadRoutes(fastify, options) {
           captureName,
           sceneName,
           seqName,
+          captureType: captureTypeRaw || null,
+          pairGroupId: pairGroupIdRaw || null,
+          audioTrackPresent:
+            audioTrackPresentRaw === ""
+              ? null
+              : ["1", "true", "yes"].includes(audioTrackPresentRaw.toLowerCase()),
           fileName,
-          mirrorFileName,
           storedPath: finalPath,
-          mirrorStoredPath: mirrorPath,
           sceneDir: finalSceneDir,
           extractedSceneFiles,
           uploadedBytes,
@@ -207,6 +219,8 @@ export async function registerUploadRoutes(fastify, options) {
             captureName,
             sceneName,
             seqName,
+            captureType: captureTypeRaw || null,
+            pairGroupId: pairGroupIdRaw || null,
             uploadedBytes,
             durationMs,
             storedPath: finalPath,

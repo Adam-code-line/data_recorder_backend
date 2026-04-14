@@ -18,6 +18,7 @@ const SCENE_ROOT_ALLOWED_FILES = new Set([
   "data.jsonl",
   "data.mov",
   "metadata.json",
+  "upload_context.json",
 ]);
 const SCENE_ROOT_IGNORED_FILES = new Set(["data2.mov"]);
 
@@ -192,7 +193,6 @@ export function buildStoragePaths({
     : sessionName;
 
   const fileName = `${sessionBaseName}.zip`;
-  const mirrorFileName = `${sessionBaseName}(1).zip`;
   const finalSceneDir = path.join(
     config.uploadRootDir,
     normalizedCaptureName,
@@ -200,7 +200,6 @@ export function buildStoragePaths({
   );
   const finalDir = path.join(finalSceneDir, normalizedSeqName);
   const finalPath = path.join(finalDir, fileName);
-  const mirrorPath = path.join(finalDir, mirrorFileName);
   const stagingPath = path.join(
     config.stagingDir,
     `${taskId}_${Date.now()}_${Math.round(Math.random() * 1e6)}.part`,
@@ -212,10 +211,8 @@ export function buildStoragePaths({
     seqName: normalizedSeqName,
     finalSceneDir,
     fileName,
-    mirrorFileName,
     finalDir,
     finalPath,
-    mirrorPath,
     stagingPath,
   };
 }
@@ -258,12 +255,6 @@ export async function moveStagingToFinal(stagingPath, finalDir, finalPath) {
   await fs.mkdir(finalDir, { recursive: true });
   await fs.rm(finalPath, { force: true });
   await fs.rename(stagingPath, finalPath);
-}
-
-export async function copyFinalToMirror(finalPath, mirrorPath) {
-  await fs.mkdir(path.dirname(mirrorPath), { recursive: true });
-  await fs.rm(mirrorPath, { force: true });
-  await fs.copyFile(finalPath, mirrorPath);
 }
 
 function normalizeArchiveEntryPath(entryPath) {

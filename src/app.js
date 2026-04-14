@@ -19,7 +19,7 @@ export async function buildServer(config) {
   await app.register(multipart, {
     limits: {
       files: 1,
-      fields: 20,
+      fields: 32,
       parts: 30,
       fileSize: config.maxFileSizeBytes,
     },
